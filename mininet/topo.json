@@ -1,0 +1,9 @@
+{"node": [ "c1", "s1", "s2", "s3", "h2", "h3", "h4" ], 
+ "link": [  {"src": "c1", "dst": "s1", "bw": 10, "delay": "5ms" }, 
+            {"src": "s1", "dst": "s2", "bw": 10, "delay": "5ms" }, 
+            {"src": "s1", "dst": "s3", "bw": 10, "delay": "5ms" }, 
+            {"src": "s2", "dst": "h2", "bw": 10, "delay": "5ms" }, 
+            {"src": "s2", "dst": "h3", "bw": 10, "delay": "5ms" }, 
+            {"src": "s3", "dst": "h4", "bw": 10, "delay": "5ms" }
+         ] 
+}
