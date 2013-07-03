@@ -22,7 +22,7 @@ class Multicast(app_manager.RyuApp):
         super(Multicast, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
         self.Topo = topo.Topo()
-        self.Topo.LoadTopo("/home/ubuntu/mininet/custom/topo.json")
+        self.Topo.LoadTopo("/home/ubuntu/hg/openflow/mininet/topo.json")
 
     def ipv4_to_int(self, string):
         ip = string.split('.')
@@ -74,12 +74,10 @@ class Multicast(app_manager.RyuApp):
             # Swtich - on the way 
             self.logger.info("! sw on the way")
             # Query for dest port
-            outport_list = self.Topo.switch_outport(dpid) 
+            outport_list = self.Topo.switch_outport(haddr_to_str(src), dpid) 
             for port in outport_list:
                 action = datapath.ofproto_parser.OFPActionOutput(port)
                 self.add_action(datapath, [action, ])
-                #actions = [datapath.ofproto_parser.OFPActionOutput(port)]
-                #self.add_apply_actions(datapath, actions, msg)
                 self.logger.info("! send to port %s", str(port))
         else:
             # Swtich - last hop
@@ -91,7 +89,7 @@ class Multicast(app_manager.RyuApp):
             ##nw_dst = '10.0.0.2'
             ##nw_dst_int = self.ipv4_to_int(nw_dst)
             ##act1 = datapath.ofproto_parser.OFPActionSetNwDst(nw_dst_int)
-            # Set MAC
+            # Set broadcast MAC
             dl_dst = 'ff:ff:ff:ff:ff:ff'
             dl_dst_bin = haddr_to_bin(dl_dst)
             act_mac = datapath.ofproto_parser.OFPActionSetDlDst(dl_dst_bin)
