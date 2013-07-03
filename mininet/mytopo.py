@@ -50,9 +50,11 @@ class MyTopo( Topo ):
            # Data mapping
            src = node[ link_obj["src"] ]
            dst = node[ link_obj["dst"] ]
+           p1 = link_obj["p1"]
+           p2 = link_obj["p2"]
            linkopts = dict(bw=link_obj["bw"], delay=link_obj["delay"])
            # Set link
-           self.addLink( src, dst, **linkopts )
+           self.addLink( src, dst, port1=p1, port2=p2, **linkopts )
 
 topos = { 'mytopo': ( lambda: MyTopo() ) }
 
