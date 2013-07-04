@@ -22,7 +22,8 @@ class Multicast(app_manager.RyuApp):
         super(Multicast, self).__init__(*args, **kwargs)
         self.mac_to_port = {}
         self.Topo = topo.Topo()
-        self.Topo.LoadTopo("/home/ubuntu/hg/openflow/mininet/topo.json")
+        self.Topo.load_topo("/home/ubuntu/hg/openflow/mininet/topo.json")
+        self.Topo.update_flow("flow.json")
 
     def ipv4_to_int(self, string):
         ip = string.split('.')
