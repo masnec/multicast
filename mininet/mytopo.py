@@ -34,7 +34,7 @@ class MyTopo( Topo ):
         Topo.__init__( self )
 
         # Load topology from file
-        topo_data = LoadTopo("/home/ubuntu/mininet/custom/topo.json")
+        topo_data = LoadTopo("topo.json")
         # Add hosts and switches
         node = {}
         for name in topo_data["node"]:
