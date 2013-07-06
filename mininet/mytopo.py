@@ -12,15 +12,10 @@ from mininet.topo import Topo
 
 def LoadTopo(file_name):
    # Read file
-   file = open(file_name, "r")
    json_str = ''
-   # Get data
-   while True:
-      str = file.readline()
-      if len(str) == 0:
-         file.close()
-         break
-      json_str += str.replace('\n', '').strip()
+   with open(file_name, "r") as file:
+       for line in file:
+           json_str += line.replace('\n', '').strip()
    # Load JSON 
    topo = json.loads(json_str)
    return topo
