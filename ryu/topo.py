@@ -94,8 +94,11 @@ class Topo(object):
     def switch_outport(self, src_mac ,dpid):
         # Convert MAC to host ID
         src_id = int(src_mac.replace(':',''), 16)
-        return self.sw_outport[src_id][dpid]
-        
+        try:
+            return self.sw_outport[src_id][dpid]
+        except:
+            return []
+
     def switch_type(self, dpid):
         # Type 0 -> intermediate, 1 -> last hop
         return self.sw_type[dpid]
