@@ -114,3 +114,62 @@ class Topo(object):
         ip = (10<<24) + id
         return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
 
+    def cplex_dump_topo(self, file_name):
+        # Get node types
+        num_source = 0
+        num_host = 0
+        num_switch = 0
+        for obj in self.topo["node"]:
+            if obj[0] == 'c':
+                num_source +=1
+            elif obj[0] == 'h':
+                num_host +=1
+            else:
+                num_switch +=1
+        total_node = num_source + num_host + num_switch
+
+        # Matrix ID mapping
+        id_map = {}
+        ## source, host, switch
+        for id in range(1, num_source + 1):
+            id_map['c'+str(id)] = id
+        for id in range(1, num_host + 1):
+            id_map['h'+str(id + num_source)] = id + num_source
+        for id in range(1, num_switch + 1):
+            id_map['s'+str(id)] = id + num_source + num_host
+        
+        # Build link matrix
+        link = {}
+        ## init
+        for i in range(1, total_node + 1):
+            link[i] = {}
+            for j in range(1, total_node + 1):
+                link[i][j] = 0
+        ## get data
+        for obj in self.topo["link"]:
+            link[ id_map[ obj["src"] ] ][ id_map[ obj["dst"] ] ] = 1
+
+        # Generate string
+        output = ""
+        
+        output += "K = 1\n"
+        output += "S = " + str(num_source) + "\n"
+        output += "H = " + str(num_host) + "\n"
+        
+        output += "SW = " + str(num_switch) + "\n"
+        output += "S_LIST = [ " + " ".join(map(lambda n:str(n), range(1, num_source + 1))) + " ]\n"
+        output += "H_LIST = [ " + " ".join(map(lambda n:str(n), range(num_source + 1, num_host + num_source + 1))) + " ]\n"
+        output += "SW_LIST = [ " \
+                +  " ".join(map(lambda n:str(n), range(num_source + num_host + 1, total_node + 1))) + " ]\n"
+        
+        ## add link map
+        output += "LINK = [ \n"
+        for i in range(1, total_node +1):
+            output += "[ "
+            for j in range(1, total_node + 1):
+                output += str(link[i][j]) + " "
+            output += "]\n"
+        output += "] \n"
+        
+        with open(file_name, "w") as file:
+            file.write(output)
