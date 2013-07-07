@@ -13,6 +13,8 @@ class Topo(object):
         self.topo = {}
         self.sw_outport = {}
         self.sw_type = {}
+        # set default descriptor = 1
+        self.K = 1
        
         # test data
         """
@@ -78,24 +80,30 @@ class Topo(object):
             self.create_switch_info()
         
         # Update sw_outport
+        ## for each camera
         for camera in self.flow:
             cam_id = int(camera[1:])
             self.sw_outport[cam_id] = {}
-            for src_sw in self.flow[camera]:
-                src_id = int(src_sw[1:])
-                # Reset outport
-                self.sw_outport[cam_id][src_id] = []
-                for dst_sw in self.flow[camera][src_sw]:
-                    dst_id = int(dst_sw[1:])
-                    (src_port, dst_port) = self.map_sw_port[(src_id, dst_id)]
-                    # Append port
-                    self.sw_outport[cam_id][src_id].append(src_port)
+            ## for each descriptor k
+            for k in self.flow[camera]:
+                k_id = int(k[1:])
+                self.sw_outport[cam_id][k_id] = {}
+                ## for each source link
+                for src_sw in self.flow[camera][k]:
+                    src_id = int(src_sw[1:])
+                    # Reset outport
+                    self.sw_outport[cam_id][k_id][src_id] = []
+                    for dst_sw in self.flow[camera][k][src_sw]:
+                        dst_id = int(dst_sw[1:])
+                        (src_port, dst_port) = self.map_sw_port[(src_id, dst_id)]
+                        # Append port
+                        self.sw_outport[cam_id][k_id][src_id].append(src_port)
 
-    def switch_outport(self, src_mac ,dpid):
+    def switch_outport(self, camera_mac ,dpid, k_id):
         # Convert MAC to host ID
-        src_id = int(src_mac.replace(':',''), 16)
+        camera_id = int(camera_mac.replace(':',''), 16)
         try:
-            return self.sw_outport[src_id][dpid]
+            return self.sw_outport[camera_id][k_id][dpid]
         except:
             return []
 
@@ -114,7 +122,12 @@ class Topo(object):
         ip = (10<<24) + id
         return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
 
-    def cplex_dump_topo(self, file_name):
+    def convert_k_id_to_ip(self, id):
+        # Start from 224.0.0.0
+        ip = (224<<24) + id
+        return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
+        
+    def cplex_generate_input(self, file_name):
         # Get node types
         num_source = 0
         num_host = 0
@@ -152,7 +165,7 @@ class Topo(object):
         # Generate string
         output = ""
         
-        output += "K = 1\n"
+        output += "K = " + str(self.K)  + "\n"
         output += "S = " + str(num_source) + "\n"
         output += "H = " + str(num_host) + "\n"
         
@@ -173,3 +186,9 @@ class Topo(object):
         
         with open(file_name, "w") as file:
             file.write(output)
+    
+    def cplex_read_output(self, file_name):
+        with open(file_name, "r") as file:
+            for line in file:
+                pass
+

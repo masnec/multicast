@@ -31,6 +31,43 @@ class Multicast(app_manager.RyuApp):
         self.Topo.load_topo("../mininet/topo.json")
         #self.Topo.update_flow("flow.json")
         self.looper_update_flow()
+    
+    def set_switch_flow(self, datapath, src_mac, k_id):
+        dpid = datapath.id
+        outport_list = self.Topo.switch_outport(src_mac, dpid, k_id)
+                
+        # Set rule
+        rule = nx_match.ClsRule()
+        ## match camera MAC
+        rule.set_dl_src( haddr_to_bin(src_mac) )
+        ## match IP with descriptor K
+        nw_dst = self.Topo.convert_k_id_to_ip(k_id)
+        rule.set_nw_dst( self.ipv4_to_int(nw_dst) )
+        self.logger.info("!!! --- K = %s, dst_ip = %s", str(k_id), nw_dst)
+
+        # Duplicate packet
+        action_list = []
+        for port in outport_list:
+            action = datapath.ofproto_parser.OFPActionOutput(port)
+            action_list.append(action)
+            self.logger.info("!!! ----- Add port: %s", port)
+
+            # Deal with different type of switch
+            if len(action_list) > 0:
+                # At least one output
+                if self.Topo.switch_type(dpid) == 0:
+                    # Switch - on the way
+                    pass 
+                else:
+                    # Switch - the last hop
+                    # Set broadcast MAC
+                    dl_dst = 'ff:ff:ff:ff:ff:ff'
+                    dl_dst_bin = haddr_to_bin(dl_dst)
+                    action = datapath.ofproto_parser.OFPActionSetDlDst(dl_dst_bin)
+                    action_list.append(action)
+                
+                # Send action
+                self.add_action(datapath, action_list, rule = rule) 
 
     def looper_update_flow(self):
         self.logger.info("!!! Update flow")
@@ -40,42 +77,20 @@ class Multicast(app_manager.RyuApp):
         
         # Write to switches
         for dpid, datapath in self.switches.items():
-            # Del all flows
+            # Del all flows first
             datapath.send_delete_all_flows()
             datapath.send_barrier()
             
             # For each camera
             for src_id in self.Topo.sw_outport:
                 src_mac = self.Topo.convert_host_id_to_mac(src_id)
-                self.logger.info("!!! -  Camera MAC: %s, dpid: %s",src_mac, str(dpid))
-                outport_list = self.Topo.switch_outport(src_mac, dpid)
+                self.logger.info("!!! -  Camera MAC: %s, dpid: %s, sw_type: %s"
+                                    ,src_mac, str(dpid), str(self.Topo.switch_type(dpid)))
                 
-                # Match camera MAC
-                rule = nx_match.ClsRule()
-                rule.set_dl_src( haddr_to_bin(src_mac) )
-                
-                # Duplicate packet
-                action_list = []
-                for port in outport_list:
-                    action = datapath.ofproto_parser.OFPActionOutput(port)
-                    action_list.append(action)
-                    self.logger.info("!!! --- Add port: %s", port)
-
-                # Deal with different type of switch
-                if len(action_list) > 0:
-                    # At least one output
-                    if self.Topo.switch_type(dpid) == 0:
-                        # Switch - on the way
-                        pass 
-                    else:
-                        # Switch - the last hop
-                        # Set broadcast MAC
-                        dl_dst = 'ff:ff:ff:ff:ff:ff'
-                        dl_dst_bin = haddr_to_bin(dl_dst)
-                        action = datapath.ofproto_parser.OFPActionSetDlDst(dl_dst_bin)
-                        action_list.append(action)
-                    # Send action
-                    self.add_action(datapath, action_list, rule = rule)
+                # For each descriptor K
+                for k_id in self.Topo.sw_outport[src_id]:
+                    # Set switch flow
+                    self.set_switch_flow(datapath, src_mac, k_id)
 
         # Trigger next update
         Timer(10, self.looper_update_flow).start()
