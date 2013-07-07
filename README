@@ -1,0 +1,28 @@
+
+Mininet:
+    1. miminet/mytopo.py:
+        Take mininet/topo.json as input, build network topology.
+    2. mininet/topo.json:
+        *IMPORTANT*
+        The file describe network topology based on following rule.
+        i) Camera: c, Video sink: h, Switch: s
+        ii) Camera and Sink are host, start from 1 ( c1, c2, h3, h4, h5 )
+        iii) Switch start from 1 ( s1, s2, s3 )
+        iv) Switch port start from 2
+
+Ryu:
+    1. ryu/topo.py:
+        Provide API to operate network topology and link
+        i) generate/read CPLEX input/result
+        ii) update flow info
+    2. ryu/flow.json:
+        You can use the format to set current flow data,
+        or feed CPLEX result instead.
+    3. ryu/multicast.py:
+        Ryu app.
+        It uses ryu/topo.py to learn network topology and update flow info.
+    4. ryu/test.py
+        For ryu/topo.py testing.
+        1. Shows how to use Topo to generate/read CPLEX input/result.
+        2. Shows how to update flow info with ryu/flow.json or CPLEX result.
+        
