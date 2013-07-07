@@ -25,4 +25,6 @@ Ryu:
         For ryu/topo.py testing.
         1. Shows how to use Topo to generate/read CPLEX input/result.
         2. Shows how to update flow info with ryu/flow.json or CPLEX result.
-        
+    5. ryu/cplex.[in|out]
+        Samples for CPLEX.
+
