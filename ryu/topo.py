@@ -15,22 +15,6 @@ class Topo(object):
         self.sw_type = {}
         # set default descriptor = 1
         self.K = 1
-       
-        # test data
-        """
-        self.sw_outport[1] = {}
-        self.sw_outport[1][1] = [2, 3]
-        self.sw_outport[1][2] = []
-        self.sw_outport[1][3] = []
-        self.sw_type[1] = 0
-        self.sw_type[2] = 1
-        self.sw_type[3] = 1
-        """
-        #self.load_topo('../mininet/topo.json')
-        #self.update_flow('flow.json')
-        #print self.topo
-        #print self.sw_outport
-        #print self.sw_type
 
     def load_json(self, file_name):
         # Read file
@@ -74,8 +58,9 @@ class Topo(object):
                         self.sw_type[src_id] = 1
     
     def update_flow(self, file_name = None):
-        # Load flow from json file
-        self.load_flow(file_name)
+        if file_name:
+            # Load flow from json file
+            self.load_flow(file_name)
         if not hasattr(self, "map_sw_port"):
             self.create_switch_info()
         
@@ -188,7 +173,61 @@ class Topo(object):
             file.write(output)
     
     def cplex_read_output(self, file_name):
+        # Get node types
+        num_source = 0
+        num_host = 0
+        num_switch = 0
+        for obj in self.topo["node"]:
+            if obj[0] == 'c':
+                num_source +=1
+            elif obj[0] == 'h':
+                num_host +=1
+            else:
+                num_switch +=1
+        total_node = num_source + num_host + num_switch
+        
+        # Matrix ID mapping
+        id_map = {}
+        ## source, host, switch
+        for id in range(1, num_source + 1):
+            id_map[id] = 'c'+str(id)
+        for id in range(1, num_host + 1):
+            id_map[id + num_source] = 'h'+str(id + num_source)
+        for id in range(1, num_switch + 1):
+            id_map[id + num_source + num_host] = 's'+str(id)
+        
         with open(file_name, "r") as file:
-            for line in file:
-                pass
+            # Reset flow
+            self.flow = {}
+            
+            # For each camera
+            for camera_id in range(1, num_source + 1):
+                camera = 'c'+str(camera_id)
+                self.flow[camera] = {}
+                
+                # For each descriptor 
+                for k_id in range(1, self.K + 1):
+                    k = 'k'+str(k_id)
+                    self.flow[camera][k] = {}
+                    
+                    # For each link source
+                    for src_id in range(1, total_node + 1):
+                        # Process data from file
+                        line = file.readline()
+                        while line.strip() == "":
+                            line = file.readline()
+                        conns = line.strip().split(" ")
+                        
+                        # only record link from switches
+                        if src_id <= total_node - num_switch:
+                            continue
+                        src_node = id_map[src_id]
+                        self.flow[camera][k][src_node] = []
+                        
+                        # For each link dest
+                        for dst_id in range(1, total_node + 1):
+                            if conns[dst_id-1] == "1":
+                                # Add to flow list
+                                dst_node = id_map[dst_id]
+                                self.flow[camera][k][src_node].append(dst_node)
 
