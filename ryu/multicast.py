@@ -10,6 +10,7 @@ from ryu.controller.handler import MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_0
 from ryu.ofproto import nx_match
+from ryu.ofproto import ether
 from ryu.lib.mac import haddr_to_str
 from ryu.lib.mac import haddr_to_bin
 #from ryu.lib.ip import ipv4_to_bin
@@ -41,6 +42,7 @@ class Multicast(app_manager.RyuApp):
         ## match camera MAC
         rule.set_dl_src( haddr_to_bin(src_mac) )
         ## match IP with descriptor K
+        rule.set_dl_type( ether.ETH_TYPE_IP )
         nw_dst = self.Topo.convert_k_id_to_ip(k_id)
         rule.set_nw_dst( self.ipv4_to_int(nw_dst) )
         self.logger.info("!!! --- K = %s, dst_ip = %s", str(k_id), nw_dst)
@@ -107,6 +109,7 @@ class Multicast(app_manager.RyuApp):
     def add_action(self, dp, action, rule = None):
         if rule is None:
             rule = nx_match.ClsRule()
+
         self.send_flow_mod(
                 dp, rule, 0, dp.ofproto.OFPFC_ADD, 0, 0, None,
                 0xffffffff, None, dp.ofproto.OFPFF_SEND_FLOW_REM, action)
