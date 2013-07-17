@@ -79,6 +79,9 @@ class Multicast(app_manager.RyuApp):
         
         # Write to switches
         for dpid, datapath in self.switches.items():
+            # Output Stat
+            self.send_flow_stats_request(datapath)
+
             # Del all flows first
             datapath.send_delete_all_flows()
             datapath.send_barrier()
@@ -130,6 +133,16 @@ class Multicast(app_manager.RyuApp):
                 priority, buffer_id, out_port, flags, actions)
         dp.send_msg(m)
 
+    def send_flow_stats_request(self, datapath):
+        ofp = datapath.ofproto
+        ofp_parser = datapath.ofproto_parser
+        req = ofp_parser.OFPFlowStatsRequest(
+                datapath=datapath, flags=0,
+                match=ofp_parser.OFPMatch(
+                    ofp.OFPFW_ALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                table_id=0xff, out_port=ofp.OFPP_NONE)
+        datapath.send_msg(req)
+
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
@@ -155,3 +168,22 @@ class Multicast(app_manager.RyuApp):
             self.logger.info('!!! datapath leave, id = ' + str(ev.dp.id))
             # Del from switches
             self.switches.pop(ev.dp.id, None)
+
+    @set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
+    def flow_stats_reply_handler(self, ev):
+        msg = ev.msg
+        body = msg.body
+        stats = []
+        for stat in body:
+            stats.append('length=%d table_id=%d match=%s '
+                    'duration_sec=%d duration_nsec=%d '
+                    'priority=%d idle_timeout=%d hard_timeout=%d '
+                    'cookie=%d packet_count=%d byte_count=%d '
+                    'actions=%s' % (stat.length, stat.table_id,
+                        stat.match, stat.duration_sec,
+                            stat.duration_nsec, stat.priority,
+                            stat.idle_timeout, stat.hard_timeout,
+                            stat.cookie, stat.packet_count,
+                            stat.byte_count, stat.actions))
+        self.logger.debug('OFPFlowStatsReply received: body=%s', stats)
+
