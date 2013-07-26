@@ -44,7 +44,8 @@ class Multicast(app_manager.RyuApp):
         ## match IP with descriptor K
         rule.set_dl_type( ether.ETH_TYPE_IP )
         nw_dst = self.Topo.convert_k_id_to_ip(k_id)
-        rule.set_nw_dst( self.ipv4_to_int(nw_dst) )
+        ## Discard IP phase 4: reserved for sender
+        rule.set_nw_dst_masked( self.ipv4_to_int(nw_dst), self.ipv4_to_int("255.255.255.0") )
         self.logger.info("!!! --- K = %s, dst_ip = %s", str(k_id), nw_dst)
 
         # Duplicate packet

@@ -108,8 +108,8 @@ class Topo(object):
         return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
 
     def convert_k_id_to_ip(self, id):
-        # Start from 224.0.0.0
-        ip = (224<<24) + id
+        # Start from 224.0.0.0, 224.0.1.0, ...
+        ip = (224<<24) + (id<<8)
         return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
         
     def cplex_generate_input(self, file_name):
