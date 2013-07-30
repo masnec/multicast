@@ -39,10 +39,13 @@ class Multicast(app_manager.RyuApp):
                 
         # Set rule
         rule = nx_match.ClsRule()
-        ## match camera MAC
-        rule.set_dl_src( haddr_to_bin(src_mac) )
-        ## match IP with descriptor K
         rule.set_dl_type( ether.ETH_TYPE_IP )
+        ## match camera MAC
+        #rule.set_dl_src( haddr_to_bin(src_mac) )
+        src_id = int(src_mac.replace(':',''), 16)
+        nw_src = self.Topo.convert_host_id_to_ip( src_id )
+        rule.set_nw_src( self.ipv4_to_int(nw_src) )
+        ## match IP with descriptor K
         nw_dst = self.Topo.convert_k_id_to_ip(k_id)
         ## Discard IP phase 4: reserved for sender
         rule.set_nw_dst_masked( self.ipv4_to_int(nw_dst), self.ipv4_to_int("255.255.255.0") )
