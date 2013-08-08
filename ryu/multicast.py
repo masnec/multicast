@@ -26,13 +26,31 @@ class Multicast(app_manager.RyuApp):
         super(Multicast, self).__init__(*args, **kwargs)
         self.dpset = kwargs['dpset']
 
+        # Dump flow stat per 60 seconds
+        self.dump_flow_stat_sec = 60
+        # Set update flow period (second), 0 -> turn off
+        self.update_flow_sec = 0
+
         self.mac_to_port = {}
         self.switches = {}
         self.Topo = topo.Topo()
         self.Topo.load_topo("../mininet/topo.json")
-        #self.Topo.update_flow("flow.json")
-        self.looper_update_flow()
+        
+        # Wait 10 seconds for switches connecting to controller, then update flow
+        Timer(10, self.looper_update_flow).start()
+        # Start to dump data after 10 + dump_flow_stat_sec
+        Timer(10 + self.dump_flow_stat_sec, self.looper_dump_flow_stat).start()
     
+    def looper_dump_flow_stat(self):
+        # Iterate over switches
+        for dpid, datapath in self.switches.items():
+            # Send stat request
+            self.send_flow_stats_request(datapath)
+
+        # Trigger next dump while secs > 0
+        if self.dump_flow_stat_sec > 0:
+            Timer(self.dump_flow_stat_sec, self.looper_dump_flow_stat).start()
+
     def set_switch_flow(self, datapath, src_mac, k_id):
         dpid = datapath.id
         outport_list = self.Topo.switch_outport(src_mac, dpid, k_id)
@@ -83,9 +101,6 @@ class Multicast(app_manager.RyuApp):
         
         # Write to switches
         for dpid, datapath in self.switches.items():
-            # Output Stat
-            self.send_flow_stats_request(datapath)
-
             # Del all flows first
             datapath.send_delete_all_flows()
             datapath.send_barrier()
@@ -101,8 +116,9 @@ class Multicast(app_manager.RyuApp):
                     # Set switch flow
                     self.set_switch_flow(datapath, src_mac, k_id)
 
-        # Trigger next update
-        Timer(10, self.looper_update_flow).start()
+        # Trigger next update while period > 0
+        if self.update_flow_sec > 0:
+            Timer(self.update_flow_sec, self.looper_update_flow).start()
     
     def ipv4_to_int(self, string):
         ip = string.split('.')
@@ -176,18 +192,33 @@ class Multicast(app_manager.RyuApp):
     @set_ev_cls(ofp_event.EventOFPFlowStatsReply, MAIN_DISPATCHER)
     def flow_stats_reply_handler(self, ev):
         msg = ev.msg
+        dpid = msg.datapath.id
         body = msg.body
         stats = []
-        for stat in body:
-            stats.append('length=%d table_id=%d match=%s '
-                    'duration_sec=%d duration_nsec=%d '
-                    'priority=%d idle_timeout=%d hard_timeout=%d '
-                    'cookie=%d packet_count=%d byte_count=%d '
-                    'actions=%s' % (stat.length, stat.table_id,
-                        stat.match, stat.duration_sec,
-                            stat.duration_nsec, stat.priority,
-                            stat.idle_timeout, stat.hard_timeout,
-                            stat.cookie, stat.packet_count,
-                            stat.byte_count, stat.actions))
-        self.logger.debug('OFPFlowStatsReply received: body=%s', stats)
 
+        for stat in body:
+            stats.append('%d %d %d %d\n' % (
+                            stat.duration_sec,
+                            stat.duration_nsec,
+                            stat.packet_count,
+                            stat.byte_count ) )
+         
+        #- Format reference
+        #    stats.append('length=%d table_id=%d match=%s '
+        #            'duration_sec=%d duration_nsec=%d '
+        #            'priority=%d idle_timeout=%d hard_timeout=%d '
+        #            'cookie=%d packet_count=%d byte_count=%d '
+        #            'actions=%s' % (stat.length, stat.table_id,
+        #                stat.match, stat.duration_sec,
+        #                    stat.duration_nsec, stat.priority,
+        #                    stat.idle_timeout, stat.hard_timeout,
+        #                    stat.cookie, stat.packet_count,
+        #                    stat.byte_count, stat.actions))
+        #self.logger.debug('OFPFlowStatsReply received: body=%s', stats)
+        
+        # Write stat to file
+        file_path = 'log/stat_sw_' + str(dpid)
+        with open(file_path, 'a') as file:
+            file.write( ''.join(stats) + '\n' )
+
+        self.logger.info('OFPFlowStatsReply received, datapath id = %d', dpid)
