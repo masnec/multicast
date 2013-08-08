@@ -47,7 +47,10 @@ class MyTopo( Topo ):
            dst = node[ link_obj["dst"] ]
            p1 = link_obj["p1"]
            p2 = link_obj["p2"]
-           linkopts = dict(bw=link_obj["bw"], delay=link_obj["delay"])
+           linkopts = dict( bw = link_obj.setdefault('bw', 10),
+                            delay = link_obj.setdefault('delay', '10ms'),
+                            jitter = link_obj.setdefault('jitter', '10ms'),
+                            loss = link_obj.setdefault('loss', 1.5) )
            # Set link
            self.addLink( src, dst, port1=p1, port2=p2, **linkopts )
 
