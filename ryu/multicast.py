@@ -13,7 +13,7 @@ from ryu.ofproto import nx_match
 from ryu.ofproto import ether
 from ryu.lib.mac import haddr_to_str
 from ryu.lib.mac import haddr_to_bin
-#from ryu.lib.ip import ipv4_to_bin
+from ryu.lib.ip import ipv4_to_bin, ipv4_to_str
 import topo
 
 class Multicast(app_manager.RyuApp):
@@ -197,12 +197,13 @@ class Multicast(app_manager.RyuApp):
         stats = []
 
         for stat in body:
-            stats.append('%d %d %d %d\n' % (
+            stats.append('%s %d %d %d %d\n' % (
+                            ipv4_to_str(stat.match.nw_dst),
                             stat.duration_sec,
                             stat.duration_nsec,
                             stat.packet_count,
                             stat.byte_count ) )
-         
+
         #- Format reference
         #    stats.append('length=%d table_id=%d match=%s '
         #            'duration_sec=%d duration_nsec=%d '
